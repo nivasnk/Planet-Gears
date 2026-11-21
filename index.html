@@ -15,16 +15,19 @@
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 
   <script>
-    /* Hide reveal elements only if animations will run; fail-safe reveal after 2.5s */
+    /* Hide reveal elements only if animations will run; fail-safe: show everything if scripts haven't started after 4s
+       (main.js still animates everything further down the page when it arrives late, e.g. on a slow phone connection) */
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.remove('has-anim');
-    setTimeout(function () { if (!window.__animReady) document.documentElement.classList.remove('has-anim'); }, 2500);
+    setTimeout(function () { if (!window.__animReady) document.documentElement.classList.remove('has-anim'); }, 4000);
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.css">
+  <link rel="stylesheet" href="assets/vendor/swiper-bundle.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="preload" href="assets/vendor/gsap.min.js" as="script">
+  <link rel="preload" href="assets/vendor/ScrollTrigger.min.js" as="script">
 
   <script type="application/ld+json">
   {
@@ -584,12 +587,13 @@
     </div>
   </div>
 
-  <!-- ================= SCRIPTS (all free, CDN, version-pinned) ================= -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js" defer></script>
-  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js" defer></script>
+  <!-- ================= SCRIPTS (all free, self-hosted copies in assets/vendor so phones load them from one site) =================
+       GSAP 3.12.5 + ScrollTrigger · Swiper 11.1.14 · Motion 11.11.13 · Lucide 0.460.0 icons (assets/js/icons.js) -->
+  <script src="assets/js/icons.js" defer></script>
+  <script src="assets/vendor/gsap.min.js" defer></script>
+  <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
+  <script src="assets/vendor/swiper-bundle.min.js" defer></script>
+  <script src="assets/vendor/motion.js" defer></script>
   <script src="assets/js/gears.js" defer></script>
   <script src="assets/js/main.js" defer></script>
 </body>

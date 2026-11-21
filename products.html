@@ -14,12 +14,13 @@
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
   <script>
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.remove('has-anim');
-    setTimeout(function () { if (!window.__animReady) document.documentElement.classList.remove('has-anim'); }, 2500);
+    setTimeout(function () { if (!window.__animReady) document.documentElement.classList.remove('has-anim'); }, 4000);
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="preload" href="assets/vendor/gsap.min.js" as="script">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -453,11 +454,11 @@
       </div>
     </div>
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js" defer></script>
-  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js" defer></script>
+  <script src="assets/js/icons.js" defer></script>
+  <script src="assets/vendor/gsap.min.js" defer></script>
+  <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
+  <script src="assets/vendor/Flip.min.js" defer></script>
+  <script src="assets/vendor/motion.js" defer></script>
   <script src="assets/js/gears.js" defer></script>
   <script src="assets/js/main.js" defer></script>
   <script src="assets/js/catalogue.js" defer></script>

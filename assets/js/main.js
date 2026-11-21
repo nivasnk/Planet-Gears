@@ -17,8 +17,17 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
   /* If the animation layer can't run, show everything immediately. */
+  var late = hasGSAP && !reduceMotion && !doc.classList.contains('has-anim');
   if (!hasGSAP || reduceMotion) doc.classList.remove('has-anim');
   window.__animReady = true;
+
+  /* Scripts arrived after the 4s safety timeout (slow phone connection): the page is already visible.
+     Keep what the visitor can see as it is, but re-arm the animations for everything further down. */
+  if (late) {
+    doc.classList.add('has-anim', 'anim-late');
+    var fold = window.innerHeight * 0.95;
+    $$('[data-reveal]').forEach(function (el) { if (el.getBoundingClientRect().top < fold) el.classList.add('is-in'); });
+  }
 
   /* ---------- Icons ---------- */
   if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.75, 'aria-hidden': 'true' } });
@@ -150,9 +159,11 @@
     if (window.ScrollTrigger) gsap.registerPlugin(window.ScrollTrigger);
     var ST = window.ScrollTrigger;
     gsap.defaults({ ease: 'power3.out', duration: 0.9 });
+    // Phones: don't recalculate every time the address bar slides in/out (avoids jumps while scrolling)
+    if (ST) ST.config({ ignoreMobileResize: true });
 
-    // Hero intro
-    if ($('.hero')) {
+    // Hero intro (skipped if the hero was already shown by the slow-connection fallback)
+    if ($('.hero') && !late) {
       gsap.set('.hero [data-hero]', { y: 20 });
       var tl = gsap.timeline({ delay: 0.1 });
       tl.to('.hero h1 .line > span', { y: 0, duration: 1.1, stagger: 0.1, ease: 'power4.out' })
@@ -168,7 +179,7 @@
     }
 
     // Page hero (catalogue)
-    if ($('.page-hero')) {
+    if ($('.page-hero') && !late) {
       gsap.from('.page-hero [data-hero-item]', { opacity: 0, y: 30, stagger: 0.1, duration: 0.9 });
       gsap.from('.page-hero [data-gear]', { opacity: 0, rotate: -30, scale: 0.9, duration: 1.6, ease: 'expo.out' });
     }
@@ -179,7 +190,13 @@
         start: 'top 88%',
         once: true,
         onEnter: function (batch) {
-          gsap.to(batch, { opacity: 1, y: 0, x: 0, stagger: 0.09, duration: 0.9, overwrite: true, clearProps: 'transform' });
+          batch = batch.filter(function (el) { return !el.classList.contains('is-in'); });
+          if (!batch.length) return;
+          gsap.to(batch, {
+            opacity: 1, y: 0, x: 0, stagger: 0.09, duration: 0.9, overwrite: true,
+            // lock the finished state with a class before removing inline styles, so nothing snaps back
+            onComplete: function () { batch.forEach(function (el) { el.classList.add('is-in'); }); gsap.set(batch, { clearProps: 'opacity,transform' }); }
+          });
         }
       });
 
@@ -313,6 +330,42 @@
       c.addEventListener('mouseenter', function () { if (M) M.animate(c, { x: 6 }, { type: 'spring', stiffness: 300, damping: 20 }); });
       c.addEventListener('mouseleave', function () { if (M) M.animate(c, { x: 0 }, { type: 'spring', stiffness: 300, damping: 20 }); });
     });
+  }
+
+  /* =========================================================
+     Touch screens (phones / tablets): no hover, so animate on scroll and tap instead
+     ========================================================= */
+  if (!finePointer && !reduceMotion) {
+    // Gear artwork turns as each card scrolls (or is swiped) into view
+    if ('IntersectionObserver' in window) {
+      var spinIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var host = e.target.querySelector('[data-gear]');
+          spinArt(e.target, ((host && host.__angle) || 0) + 60);
+        });
+      }, { threshold: 0.6 });
+      $$('.product-card, .cat-card').forEach(function (c) { spinIO.observe(c); });
+    }
+
+    // Press feedback: cards and buttons sink slightly under the finger, then spring back
+    if (M) {
+      $$('.product-card, .cat-card, .ind-card, .btn, .slider-btn, .cert, .contact-card').forEach(function (el) {
+        var down = function () { M.animate(el, { scale: 0.97 }, { duration: 0.12 }); };
+        var up = function () { M.animate(el, { scale: 1 }, { type: 'spring', stiffness: 420, damping: 18 }); };
+        el.addEventListener('pointerdown', down, { passive: true });
+        el.addEventListener('pointerup', up, { passive: true });
+        el.addEventListener('pointercancel', up, { passive: true });
+        el.addEventListener('pointerleave', up, { passive: true });
+      });
+    }
+
+    // Hover-only highlights become "active while in the middle of the screen"
+    if (hasGSAP && window.ScrollTrigger) {
+      $$('.ind-card, .step, .cert').forEach(function (el) {
+        window.ScrollTrigger.create({ trigger: el, start: 'top 62%', end: 'bottom 38%', toggleClass: 'is-active' });
+      });
+    }
   }
 
   /* =========================================================

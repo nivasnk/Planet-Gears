@@ -2,14 +2,23 @@
 
 A premium industrial gear-manufacturer website. It's plain **HTML + CSS + JavaScript** with no build step, so it runs directly on **GitHub Pages**.
 
-## Libraries (all free, loaded from CDN, version-pinned)
+## Libraries (all free, version-pinned, self-hosted in `assets/vendor`)
 | Library | Used for |
 |---|---|
 | GSAP 3.12.5 + ScrollTrigger + Flip | Hero intro, scroll reveals, parallax, counters, process line, catalogue filter animation |
-| Motion 11.11.13 | Card hover lift/tilt, gear spin on hover, magnetic buttons, modal & menu transitions |
+| Motion 11.11.13 | Card hover lift/tilt, gear spin on hover, magnetic buttons, modal & menu transitions; tap feedback on phones |
 | Swiper 11.1.14 | Product-category slider and featured-products slider |
 | Lucide 0.460.0 | All UI icons |
 | Google Fonts | Barlow Condensed (headings), Barlow (body) |
+
+The library files are copied into `assets/vendor` rather than loaded from CDNs, so phones download everything from your own GitHub Pages site in one go. That's faster on mobile data and keeps the animations working on slow connections.
+
+**Icons:** `assets/js/icons.js` holds only the Lucide icons the site uses (about 12 KB, compared with 356 KB for the whole library). To add an icon, write `<i data-lucide="icon-name"></i>` using any name from [lucide.dev](https://lucide.dev/icons). If it isn't in `icons.js`, the full library loads automatically.
+
+**Phones and tablets:** touch screens have no hover, so the hover effects are replaced:
+- Gear images turn as cards scroll or are swiped into view.
+- Cards and buttons sink slightly when tapped.
+- Industry tiles, process steps and certificates highlight while they're in the middle of the screen.
 
 All gear imagery is drawn as SVG by `assets/js/gears.js`, so the site needs no image files and has no licensing issues. The hero gears mesh correctly and speed up as you scroll.
 
@@ -23,6 +32,8 @@ assets/css/style.css
 assets/js/gears.js      SVG gear renderer
 assets/js/main.js       Navigation, mega menu, animations, sliders, modal, forms
 assets/js/catalogue.js  Catalogue filtering
+assets/js/icons.js      The Lucide icons used on the site
+assets/vendor/          GSAP, ScrollTrigger, Flip, Swiper, Motion, Lucide (local copies)
 sitemap.xml, robots.txt, .nojekyll
 ```
 
@@ -75,5 +86,6 @@ To use real product photos, replace the `<div data-gear …>` inside `.media` wi
 - The hero animation pauses when off-screen or when the tab is hidden.
 - Animations use transforms and opacity only. Scroll reveals are batched.
 - `prefers-reduced-motion` turns off all motion.
-- If a CDN fails, the content still shows after 2.5 seconds.
+- If the scripts fail to load, the content still shows after 4 seconds. If they arrive late, everything further down the page still animates.
+- Off-screen menus are hidden with `clip-path`, not moved off the page, so phones never zoom the page out.
 - Semantic landmarks, skip link, keyboard-operable mega menu, focus-trapped modal, ARIA labels.

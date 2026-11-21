@@ -291,7 +291,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 /* ---------- Category slider ---------- */
 .cat-slider { overflow: visible; }
 .cat-slider .swiper-slide { height: auto; }
-.section { overflow-x: clip; }
+/* Keep sliders/decorations from widening the page. overflow:hidden is the fallback for older iPhones (Safari < 16). */
+.section { overflow: hidden; }
+@supports (overflow: clip) { .section { overflow: visible; overflow-x: clip; } }
 .cat-card {
   position: relative; display: flex; flex-direction: column; height: 100%;
   background: linear-gradient(180deg, var(--ink-800), var(--ink-850));
@@ -647,6 +649,18 @@ body.modal-open { overflow: hidden; }
 .has-anim [data-reveal="right"] { transform: translateX(40px); }
 .has-anim .hero h1 .line > span { transform: translateY(105%); }
 .has-anim .hero [data-hero] { opacity: 0; }
+/* finished reveals stay put (and anything the slow-connection fallback already showed) */
+.has-anim [data-reveal].is-in { opacity: 1; transform: none; }
+.anim-late .hero h1 .line > span { transform: none; }
+.anim-late .hero [data-hero] { opacity: 1; }
+
+/* Touch screens: hover highlights shown while the item is in the middle of the screen */
+.ind-card.is-active::before { transform: none; }
+.ind-card.is-active .ico { color: #fff; border-color: rgba(255,255,255,.5); }
+.ind-card.is-active p { color: rgba(255,255,255,.9); }
+.ind-card.is-active .idx { color: rgba(255,255,255,.75); }
+.step.is-active .dot { background: var(--orange); color: #fff; }
+.cert.is-active { border-color: var(--orange); }
 
 /* =========================================================
    Responsive
@@ -669,11 +683,13 @@ body.modal-open { overflow: hidden; }
     position: fixed; inset: 0 0 0 auto; width: min(420px, 100%); z-index: 120;
     background: var(--ink-900); border-left: 1px solid var(--line-dark);
     display: flex; flex-direction: column;
-    transform: translateX(100%); visibility: hidden;
-    transition: transform .45s var(--ease), visibility 0s linear .45s;
+    /* Closed drawer stays inside the viewport and is hidden with clip-path.
+       (Parking it off-screen with translateX makes phones zoom the whole page out.) */
+    -webkit-clip-path: inset(0 0 0 100%); clip-path: inset(0 0 0 100%); visibility: hidden;
+    transition: clip-path .45s var(--ease), -webkit-clip-path .45s var(--ease), visibility 0s linear .45s;
     overflow-y: auto; overscroll-behavior: contain;
   }
-  .main-nav.is-open { transform: none; visibility: visible; transition-delay: 0s; }
+  .main-nav.is-open { -webkit-clip-path: inset(0); clip-path: inset(0); visibility: visible; transition-delay: 0s; }
   .nav-overlay { position: fixed; inset: 0; z-index: 110; background: rgba(5,6,8,.6); opacity: 0; visibility: hidden; transition: opacity .35s, visibility 0s linear .35s; }
   .nav-overlay.is-open { opacity: 1; visibility: visible; transition-delay: 0s; }
   .nav-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--gutter); min-height: var(--header-h); border-bottom: 1px solid var(--line-dark); }
@@ -696,7 +712,7 @@ body.modal-open { overflow: hidden; }
 
   .hero { min-height: auto; padding-bottom: 0; flex-direction: column; align-items: stretch; }
   .hero-grid { grid-template-columns: 1fr; margin-bottom: 48px; }
-  .hero-visual { margin: 0 auto 8px; width: min(560px, 100%); order: -1; }
+  .hero-visual { margin: 0 auto 8px; width: min(470px, 100%); order: -1; }
   .hero-strip { position: relative; background: var(--ink-950); }
   .hero-strip .container { grid-template-columns: 1fr 1fr; }
   .hero-strip .item:nth-child(3) { border-left: 0; padding-left: 0; }
@@ -712,9 +728,10 @@ body.modal-open { overflow: hidden; }
   .filter-toggle { display: inline-flex; }
   .filters {
     position: fixed; inset: 0 auto 0 0; top: 0; width: min(360px, 92%); z-index: 130; overflow-y: auto;
-    transform: translateX(-100%); visibility: hidden; transition: transform .4s var(--ease), visibility 0s linear .4s;
+    -webkit-clip-path: inset(0 100% 0 0); clip-path: inset(0 100% 0 0); visibility: hidden;
+    transition: clip-path .4s var(--ease), -webkit-clip-path .4s var(--ease), visibility 0s linear .4s;
   }
-  .filters.is-open { transform: none; visibility: visible; transition-delay: 0s; box-shadow: 30px 0 60px rgba(0,0,0,.3); }
+  .filters.is-open { -webkit-clip-path: inset(0 -60px 0 0); clip-path: inset(0 -60px 0 0); visibility: visible; transition-delay: 0s; box-shadow: 30px 0 60px rgba(0,0,0,.3); }
   .filters-close { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line-light); color: var(--ink-900); }
   .filters-close svg { width: 20px; height: 20px; }
 }
@@ -742,11 +759,53 @@ body.modal-open { overflow: hidden; }
   .qa-item .ico { width: 48px; height: 48px; }
   .qa-item .metric { grid-column: 2; font-size: 24px; }
   .edge-top, .edge-bottom, .edge-top.edge-bottom { clip-path: none; margin-top: 0; }
+
+  /* Phones: side-slide reveals rise from below instead (never push content past the screen edge) */
+  .has-anim [data-reveal="left"], .has-anim [data-reveal="right"] { transform: translateY(32px); }
+
+  /* Hero: smaller gear visual so the headline is visible on the first screen */
+  .hero { padding-top: 20px; }
+  .hero-visual { width: min(100%, 380px); aspect-ratio: 5 / 4; margin-bottom: 0; }
+  .hero-visual .hero-gears { inset: -4%; }
+  .hero h1 { margin: 16px 0 18px; }
+  .hero-lead { margin-bottom: 26px; }
+  .hero-badges { margin-top: 30px; padding-top: 22px; }
+  .eyebrow { font-size: 12.5px; letter-spacing: .22em; }
+  .eyebrow::before { width: 24px; }
+
+  /* About visual: keep the "years" badge on screen */
+  .about-visual { margin-inline: auto; width: 100%; }
+  .about-years { left: 0; padding: 16px 20px; }
+  .about-years strong { font-size: 46px; }
+  .about-panel.p2 .tag { left: auto; right: 14px; text-align: right; }
+  .to-top { right: 14px; bottom: 14px; width: 44px; height: 44px; }
+
+  /* Process: vertical timeline */
+  .process-track { grid-template-columns: 1fr; row-gap: 0; }
+  .step { display: grid; grid-template-columns: 56px 1fr; column-gap: 18px; padding: 0 0 30px; }
+  .step::before { content: ""; position: absolute; left: 27px; top: 56px; bottom: 0; width: 2px; background: var(--line-dark-2); }
+  .step:last-child::before { display: none; }
+  .step.is-active::before { background: linear-gradient(var(--orange), var(--line-dark-2)); }
+  .step .dot { grid-row: 1 / span 3; width: 56px; height: 56px; margin: 0; }
+  .step .dot svg { width: 24px; height: 24px; }
+  .step h3 { font-size: 22px; margin: 2px 0 6px; }
+  .step p { margin: 0; }
+
+  .section-index { font-size: 72px; }
+  .slider-btn { width: 48px; height: 48px; }
+  .slider-progress { margin-top: 30px; }
+  .cta-band .btns, .cta-band .btns .btn { width: 100%; }
 }
 
 @media (max-width: 460px) {
   .ind-grid { grid-template-columns: 1fr; }
-  .process-track { grid-template-columns: 1fr; }
+  /* Industries: compact rows instead of tall empty tiles */
+  .ind-card { min-height: 0; flex-direction: row; align-items: flex-start; justify-content: flex-start; gap: 16px; padding: 20px 18px; }
+  .ind-card .ico { width: 48px; height: 48px; flex-shrink: 0; }
+  .ind-card .ico svg { width: 24px; height: 24px; }
+  .ind-card h3 { font-size: 21px; margin: 2px 0 4px; padding-right: 30px; }
+  .ind-card .idx { top: 20px; right: 18px; }
+  .ind-card::before { transform: translateX(-101%); }
   .stat .value { font-size: 46px; }
   .brand-name strong { font-size: 21px; }
   .brand-mark { width: 38px; height: 38px; }
