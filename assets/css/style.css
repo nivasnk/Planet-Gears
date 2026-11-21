@@ -131,12 +131,19 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .site-header { position: sticky; top: 0; z-index: 100; }
 .navbar {
   position: relative;
+  border-bottom: 1px solid var(--line-dark);
+  transition: box-shadow .35s var(--ease);
+}
+/* The frosted-glass layer lives on a pseudo-element: a backdrop-filter on .navbar itself would trap the
+   fixed-position mobile menu inside the 72px header bar (so the menu would open but be invisible). */
+.navbar::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
   background: rgba(15, 18, 22, .78);
   -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid var(--line-dark);
-  transition: background-color .35s var(--ease), box-shadow .35s var(--ease);
+  transition: background-color .35s var(--ease);
 }
-.site-header.is-scrolled .navbar { background: rgba(10, 12, 15, .94); box-shadow: 0 10px 40px -20px rgba(0,0,0,.9); }
+.site-header.is-scrolled .navbar { box-shadow: 0 10px 40px -20px rgba(0,0,0,.9); }
+.site-header.is-scrolled .navbar::before { background: rgba(10, 12, 15, .94); }
 .navbar .container { display: flex; align-items: center; justify-content: space-between; height: var(--header-h); gap: 24px; }
 
 .brand { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -177,6 +184,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .mega.is-open { visibility: visible; opacity: 1; transform: none; transition-delay: 0s; }
 .mega-inner { display: grid; grid-template-columns: 1fr 340px; gap: 40px; padding-block: 36px; }
+/* the mega panel's .container must not inherit the header bar's fixed height/flex layout (.navbar .container) */
+.navbar .mega-inner { display: grid; height: auto; align-items: start; justify-content: stretch; }
 .mega-label { font-family: var(--font-display); font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: var(--steel-500); margin-bottom: 18px; }
 .mega-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .mega-item {
@@ -690,13 +699,15 @@ body.modal-open { overflow: hidden; }
     overflow-y: auto; overscroll-behavior: contain;
   }
   .main-nav.is-open { -webkit-clip-path: inset(0); clip-path: inset(0); visibility: visible; transition-delay: 0s; }
-  .nav-overlay { position: fixed; inset: 0; z-index: 110; background: rgba(5,6,8,.6); opacity: 0; visibility: hidden; transition: opacity .35s, visibility 0s linear .35s; }
+  /* z-index below .site-header (100), which contains the menu, so the dimmer never covers the menu itself */
+  .nav-overlay { position: fixed; inset: 0; z-index: 99; background: rgba(5,6,8,.6); opacity: 0; visibility: hidden; transition: opacity .35s, visibility 0s linear .35s; }
   .nav-overlay.is-open { opacity: 1; visibility: visible; transition-delay: 0s; }
   .nav-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 0 var(--gutter); min-height: var(--header-h); border-bottom: 1px solid var(--line-dark); }
   .nav-drawer-head button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line-dark-2); }
   .nav-drawer-head svg { width: 22px; height: 22px; }
-  .nav-list { flex-direction: column; align-items: stretch; gap: 0; padding: 10px 0; }
-  .nav-list > li { border-bottom: 1px solid var(--line-dark); }
+  .nav-list { flex-direction: column; align-items: stretch; gap: 0; padding: 10px 0; flex-shrink: 0; }
+  .nav-list > li { border-bottom: 1px solid var(--line-dark); flex-shrink: 0; }
+  .nav-drawer-head, .nav-drawer-foot { flex-shrink: 0; }
   .nav-link { height: auto; width: 100%; justify-content: space-between; padding: 18px var(--gutter); font-size: 19px; }
   .nav-link::after { display: none; }
   .mega { position: static; visibility: visible; opacity: 1; transform: none; display: none; box-shadow: none; border: 0; background: var(--ink-850); }
