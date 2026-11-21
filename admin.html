@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Site Editor</title>
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1216; --panel: #161a1f; --panel-2: #1d2228; --line: rgba(255,255,255,.09); --line-2: rgba(255,255,255,.16);
+      --text: #e6e9ed; --muted: #8f98a3; --orange: #ff6b14; --orange-2: #e85a06; --ok: #3fbf6a; --err: #ff6161;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 "Barlow", system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    h1, h2, h3 { font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 0; }
+
+    /* Top bar */
+    .bar { display: flex; align-items: center; gap: 18px; padding: 0 18px; min-height: 60px; background: #0a0c0f; border-bottom: 1px solid var(--line); flex-shrink: 0; flex-wrap: wrap; }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: "Barlow Condensed", sans-serif; font-size: 20px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .logo img { width: 30px; height: 30px; }
+    .logo small { font-size: 12px; color: var(--muted); letter-spacing: .2em; font-weight: 600; }
+    .tabs { display: flex; gap: 4px; }
+    .tab { background: none; border: 1px solid transparent; padding: 7px 14px; color: var(--muted); font-weight: 600; border-radius: 4px; display: inline-flex; align-items: center; gap: 8px; }
+    .tab:hover { color: #fff; background: var(--panel); }
+    .tab.active { color: #fff; background: var(--panel-2); border-color: var(--line-2); }
+    .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); display: none; }
+    .tab.dirty .dot { display: inline-block; }
+    .status { flex: 1; font-size: 13px; color: var(--muted); min-width: 160px; }
+    .status b { color: var(--text); font-weight: 600; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border-radius: 4px; border: 1px solid var(--line-2); background: var(--panel); color: var(--text); font-weight: 600; font-size: 14px; white-space: nowrap; }
+    .btn:hover { background: var(--panel-2); }
+    .btn.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .btn.primary:hover { background: var(--orange-2); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn svg { width: 16px; height: 16px; }
+    .count-pill { background: rgba(255,255,255,.22); border-radius: 20px; padding: 0 7px; font-size: 12px; }
+
+    /* Layout */
+    .layout { flex: 1; display: grid; grid-template-columns: 230px 440px 1fr; min-height: 0; }
+    .groups, .fields { overflow-y: auto; border-right: 1px solid var(--line); }
+    .groups { background: #12151a; padding: 14px 10px; }
+    .search { position: relative; margin-bottom: 12px; }
+    .search input { width: 100%; padding: 9px 12px 9px 34px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; outline: none; }
+    .search input:focus { border-color: var(--orange); }
+    .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); }
+    .group-list { list-style: none; margin: 0; padding: 0; }
+    .group-list button { width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 4px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+    .group-list button:hover { background: var(--panel); color: #fff; }
+    .group-list button.active { background: var(--panel-2); color: #fff; }
+    .group-list .n { font-size: 12px; opacity: .7; }
+    .group-list .n.changed { color: var(--orange); opacity: 1; font-weight: 600; }
+
+    .fields { padding: 18px 18px 80px; background: var(--bg); scroll-behavior: smooth; }
+    .help { background: linear-gradient(135deg, rgba(255,107,20,.14), rgba(255,107,20,.04)); border: 1px solid rgba(255,107,20,.35); border-radius: 6px; padding: 14px 16px; margin-bottom: 20px; font-size: 14px; }
+    .help h3 { font-size: 16px; margin-bottom: 6px; color: #fff; }
+    .help ol { margin: 0; padding-left: 18px; color: #cfd4da; }
+    .help .x { float: right; background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; }
+    .group { margin-bottom: 26px; }
+    .group > h2 { font-size: 15px; color: var(--orange); padding: 8px 0; border-bottom: 1px solid var(--line); margin-bottom: 12px; position: sticky; top: -18px; background: var(--bg); z-index: 1; }
+    .field { margin-bottom: 12px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid transparent; border-radius: 4px; transition: border-color .2s; }
+    .field.focus { border-color: var(--line-2); border-left-color: var(--orange); }
+    .field.changed { border-left-color: var(--orange); }
+    .f-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .f-head label { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .f-head .revert { display: none; background: none; border: 0; color: var(--orange); font-size: 12.5px; font-weight: 600; padding: 0; }
+    .field.changed .revert { display: inline; }
+    .field textarea { width: 100%; resize: none; overflow: hidden; background: #0d1014; border: 1px solid var(--line-2); border-radius: 3px; padding: 8px 10px; min-height: 38px; line-height: 1.45; outline: none; display: block; }
+    .field textarea:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,20,.15); }
+    .orig { display: none; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+    .field.changed .orig { display: block; }
+    .orig s { color: #6d7580; }
+    .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+
+    /* Preview */
+    .preview { display: flex; flex-direction: column; min-width: 0; background: #262b31; }
+    .pv-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    .pv-bar .grow { flex: 1; }
+    .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; }
+    .seg button { background: none; border: 0; padding: 5px 12px; color: var(--muted); font-size: 13px; font-weight: 600; }
+    .seg button.on { background: var(--panel-2); color: #fff; }
+    .pv-wrap { flex: 1; display: flex; justify-content: center; overflow: hidden; }
+    .pv-wrap iframe { width: 100%; height: 100%; border: 0; background: #0f1216; transition: width .3s; }
+    .pv-wrap.mobile iframe { width: 390px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+
+    /* Overlays */
+    dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 0; width: min(560px, calc(100vw - 32px)); box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+    dialog::backdrop { background: rgba(5,6,8,.7); }
+    .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+    .dlg-head h2 { font-size: 20px; }
+    .dlg-head button { background: none; border: 0; color: var(--muted); font-size: 22px; line-height: 1; }
+    .dlg-body { padding: 18px 20px; display: grid; gap: 14px; max-height: 70vh; overflow-y: auto; }
+    .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .in label { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 5px; }
+    .in input, .in textarea { width: 100%; padding: 9px 12px; background: #0d1014; border: 1px solid var(--line-2); border-radius: 4px; outline: none; }
+    .in input:focus, .in textarea:focus { border-color: var(--orange); }
+    .in small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .note { font-size: 13.5px; color: #c9cfd6; background: var(--panel-2); border-radius: 4px; padding: 10px 12px; }
+    .note ol { margin: 6px 0 0; padding-left: 18px; }
+    .note a { color: var(--orange); }
+    .check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: #cfd4da; }
+    .msg { font-size: 13.5px; min-height: 20px; }
+    .msg.ok { color: var(--ok); } .msg.err { color: var(--err); }
+    .file-list { margin: 0; padding-left: 18px; color: #cfd4da; }
+
+    .loader { position: fixed; inset: 60px 0 0; display: grid; place-items: center; background: var(--bg); z-index: 5; text-align: center; padding: 20px; }
+    .loader.hidden { display: none; }
+    .loader .box { max-width: 520px; }
+    .loader h2 { font-size: 26px; margin-bottom: 10px; }
+    .loader p { color: var(--muted); }
+    .loader .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: #fff; color: #111; padding: 11px 18px; border-radius: 6px; font-weight: 600; box-shadow: 0 10px 40px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 50; max-width: calc(100vw - 32px); }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.err { background: var(--err); color: #fff; }
+
+    .only-small { display: none; }
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 200px 1fr; }
+      .preview { display: none; }
+      .layout.show-preview { grid-template-columns: 1fr; }
+      .layout.show-preview .groups, .layout.show-preview .fields { display: none; }
+      .layout.show-preview .preview { display: flex; }
+      .only-small { display: inline-flex; }
+    }
+    @media (max-width: 700px) {
+      .layout { grid-template-columns: 1fr; }
+      .groups { display: none; }
+      .row2 { grid-template-columns: 1fr; }
+      .status { order: 5; flex-basis: 100%; padding-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="logo"><img src="assets/img/favicon.svg" alt=""><span>Site Editor</span></div>
+    <nav class="tabs" id="tabs" aria-label="Pages"></nav>
+    <div class="status" id="status">Loading…</div>
+    <div class="actions">
+      <button class="btn only-small" id="btn-toggle-preview" type="button">Preview</button>
+      <button class="btn" id="btn-find" type="button" title="Change a word everywhere at once (e.g. phone number, company name)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Find &amp; replace</button>
+      <button class="btn" id="btn-settings" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>GitHub</button>
+      <button class="btn" id="btn-download" type="button" title="Download the changed pages to upload yourself">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>Download</button>
+      <button class="btn primary" id="btn-publish" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>Publish <span class="count-pill" id="change-count">0</span></button>
+    </div>
+  </header>
+
+  <div class="layout" id="layout">
+    <aside class="groups">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search text…" aria-label="Search text">
+      </div>
+      <ul class="group-list" id="group-list"></ul>
+    </aside>
+
+    <main class="fields" id="fields"></main>
+
+    <section class="preview" aria-label="Live preview">
+      <div class="pv-bar">
+        <span class="grow">Live preview · <b style="color:#fff">click any text to edit it</b></span>
+        <div class="seg"><button type="button" class="on" data-pv="desktop">Desktop</button><button type="button" data-pv="mobile">Mobile</button></div>
+        <button class="btn only-small" type="button" id="btn-back">Back to fields</button>
+      </div>
+      <div class="pv-wrap" id="pv-wrap"><iframe id="pv" title="Page preview"></iframe></div>
+    </section>
+  </div>
+
+  <!-- Shown if the pages can't be loaded automatically -->
+  <div class="loader" id="loader">
+    <div class="box">
+      <h2 id="loader-title">Loading your pages…</h2>
+      <p id="loader-text"></p>
+      <div class="btns" id="loader-btns" hidden>
+        <button class="btn primary" type="button" id="btn-connect">Connect GitHub</button>
+        <label class="btn" for="file-input">Open files from computer</label>
+        <input type="file" id="file-input" accept=".html" multiple hidden>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub settings -->
+  <dialog id="dlg-settings">
+    <form method="dialog">
+      <div class="dlg-head"><h2>Connect GitHub</h2><button value="cancel" aria-label="Close">×</button></div>
+      <div class="dlg-body">
+        <div class="note">
+          Connecting lets <b>Publish</b> save your changes straight to your GitHub repository. Your website then updates by itself in about a minute.
+          <ol>
+            <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → New fine-grained token</a>.</li>
+            <li><b>Repository access:</b> “Only select repositories” → choose your website repo.</li>
+            <li><b>Permissions → Repository → Contents:</b> “Read and write”.</li>
+            <li>Generate the token, copy it and paste it below.</li>
+          </ol>
+        </div>
+        <div class="row2">
+          <div class="in"><label for="s-owner">GitHub username</label><input id="s-owner" autocomplete="off" placeholder="your-username"></div>
+          <div class="in"><label for="s-repo">Repository name</label><input id="s-repo" autocomplete="off" placeholder="gears-website"></div>
+        </div>
+        <div class="row2">
+          <div class="in"><label for="s-branch">Branch</label><input id="s-branch" autocomplete="off" placeholder="main"></div>
+          <div class="in"><label for="s-dir">Folder in repo</label><input id="s-dir" autocomplete="off" placeholder="(leave empty)"><small>Only if the site files are inside a sub-folder.</small></div>
+        </div>
+        <div class="in"><label for="s-token">Access token</label><input id="s-token" type="password" autocomplete="off" placeholder="github_pat_…"><small>Stored only in this browser on this computer. Never shared with anyone else.</small></div>
+        <div class="msg" id="s-msg"></div>
+      </div>
+      <div class="dlg-foot">
+        <button class="btn" type="button" id="s-forget">Disconnect</button>
+        <button class="btn" value="cancel">Cancel</button>
+        <button class="btn primary" type="button" id="s-save">Test &amp; connect</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Find & replace -->
+  <dialog id="dlg-find">
+    <form method="dialog">
+      <div class="dlg-head"><h2>Find &amp; replace</h2><button value="cancel" aria-label="Close">×</button></div>
+      <div class="dlg-body">
+        <p class="note" style="margin:0">Changes a word or number <b>everywhere on every page</b>, including links. Use it for the company name, phone number, email address or address.</p>
+        <div class="in"><label for="r-find">Find</label><input id="r-find" autocomplete="off" placeholder="+00 000 000 0000"></div>
+        <div class="in"><label for="r-rep">Replace with</label><input id="r-rep" autocomplete="off" placeholder="+91 98765 43210"></div>
+        <label class="check"><input type="checkbox" id="r-case"> Match upper/lower case exactly</label>
+        <div class="msg" id="r-msg"></div>
+      </div>
+      <div class="dlg-foot">
+        <button class="btn" value="cancel">Cancel</button>
+        <button class="btn primary" type="button" id="r-go">Replace all</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Publish -->
+  <dialog id="dlg-publish">
+    <form method="dialog">
+      <div class="dlg-head"><h2>Publish changes</h2><button value="cancel" aria-label="Close">×</button></div>
+      <div class="dlg-body">
+        <div>These pages will be updated on your live website:</div>
+        <ul class="file-list" id="p-files"></ul>
+        <div class="in"><label for="p-msg">Short note about this change (optional)</label><input id="p-msg" placeholder="Updated contact details"></div>
+        <div class="msg" id="p-status"></div>
+      </div>
+      <div class="dlg-foot">
+        <button class="btn" value="cancel">Cancel</button>
+        <button class="btn primary" type="button" id="p-go">Publish now</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Pages the editor can change. Add new pages here. */
+  var PAGES = [
+    { file: 'index.html', name: 'Home' },
+    { file: 'products.html', name: 'Products' },
+    { file: '404.html', name: '404 page' }
+  ];
+
+  var SEO = 'SEO: Google & social sharing';
+  var GROUP_IDS = {
+    top: 'Hero (top of page)', products: 'Product categories slider', about: 'About us', featured: 'Featured products',
+    capabilities: 'Manufacturing process', industries: 'Industries served', quality: 'Quality assurance', contact: 'Contact section',
+    'enquiry-modal': 'Enquiry popup', 'mega-products': 'Products mega menu', 'main-nav': 'Main menu', filters: 'Catalogue filters',
+    'empty-state': 'Catalogue: no-results message'
+  };
+  var GROUP_CLASSES = [
+    ['topbar', 'Top bar'], ['hero-strip', 'Hero: feature strip'], ['nav-drawer-foot', 'Mobile menu: contact'],
+    ['page-hero', 'Page header'], ['stats', 'Counters'], ['cta-band', 'Call-to-action band'], ['toolbar', 'Catalogue toolbar'],
+    ['footer-bottom', 'Footer: bottom line'], ['nf', 'Page content'], ['skip-link', 'Hidden accessibility link']
+  ];
+  var TAGS = {
+    title: 'Browser tab & Google title', h1: 'Main heading', h2: 'Section title', h3: 'Heading', h4: 'Small heading', p: 'Paragraph',
+    a: 'Link text', button: 'Button text', label: 'Form label', option: 'Dropdown option', dt: 'Spec name', dd: 'Spec value',
+    th: 'Spec name', td: 'Spec value', li: 'List item', strong: 'Bold text', small: 'Small print', summary: 'Expand toggle', span: 'Text'
+  };
+  var CLASSES = {
+    eyebrow: 'Small label above title', 'section-lead': 'Intro paragraph', 'hero-lead': 'Intro paragraph', badge: 'Badge',
+    sku: 'Product code', desc: 'Description', thin: 'Title: light part', accent: 'Highlighted words', 'metal-text': 'Highlighted words',
+    'section-index': 'Background number', idx: 'Number', num: 'Number', metric: 'Measurement', tag: 'Image caption', btn: 'Button text',
+    'link-arrow': 'Link text', label: 'Label', 'brand-name': 'Company name'
+  };
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var ta = document.createElement('textarea');
+  function decode(s) { ta.innerHTML = s; return ta.value; }
+  function encText(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function encAttr(s) { return encText(s).replace(/"/g, '&quot;'); }
+  function esc(s) { return encAttr(String(s)); }
+  function attr(tag, name) {
+    var m = new RegExp('\\s' + name + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\')', 'i').exec(tag);
+    return m ? (m[1] != null ? m[1] : m[2]) : null;
+  }
+
+  /* ---------- Settings (stored only in this browser) ---------- */
+  var S = {};
+  try { S = JSON.parse(localStorage.getItem('site-editor-gh') || '{}'); } catch (e) { S = {}; }
+  function saveSettings() { try { localStorage.setItem('site-editor-gh', JSON.stringify(S)); } catch (e) {} }
+  function hasGH() { return !!(S.owner && S.repo && S.token); }
+  (function guess() {
+    var h = location.hostname;
+    if (!S.owner && /\.github\.io$/.test(h)) {
+      S.owner = h.split('.')[0];
+      var seg = location.pathname.split('/').filter(Boolean);
+      S.repo = seg.length > 1 ? seg[0] : h;
+    }
+    if (!S.branch) S.branch = 'main';
+  })();
+
+  /* ---------- State ---------- */
+  var pages = {};            // file -> { file, name, base, src, sha, fields, groups }
+  var cur = null;
+  var source = '';           // 'github' | 'site' | 'local'
+  var focusedId = null;
+
+  /* =========================================================
+     HTML scanner: finds every piece of visible text and its exact
+     position in the file, so edits change only that text and
+     leave the rest of the code untouched.
+     ========================================================= */
+  var VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+  var SKIP = /^(script|style|svg|template|noscript|textarea)$/;
+
+  function tagEnd(src, i) {
+    var q = null;
+    for (var j = i + 1; j < src.length; j++) {
+      var c = src[j];
+      if (q) { if (c === q) q = null; }
+      else if (c === '"' || c === "'") q = c;
+      else if (c === '>') return j;
+    }
+    return src.length - 1;
+  }
+
+  function groupOf(stack) {
+    for (var k = stack.length - 1; k >= 0; k--) {
+      var el = stack[k], id = attr(el.tag, 'id'), cls = ' ' + (attr(el.tag, 'class') || '') + ' ';
+      if (el.name === 'article' && cls.indexOf(' product-card ') >= 0) return 'product:' + el.start;
+      if (id && GROUP_IDS[id]) return GROUP_IDS[id];
+      for (var g = 0; g < GROUP_CLASSES.length; g++) if (cls.indexOf(' ' + GROUP_CLASSES[g][0] + ' ') >= 0) return GROUP_CLASSES[g][1];
+      if (el.name === 'header') return 'Header & menu';
+      if (el.name === 'footer') return 'Footer';
+      var al = attr(el.tag, 'aria-label');
+      if (al && /^(section|aside)$/.test(el.name)) return al;
+    }
+    return 'Other text';
+  }
+
+  function labelOf(stack) {
+    for (var k = stack.length - 1; k >= Math.max(0, stack.length - 4); k--) {
+      var el = stack[k];
+      var cls = (attr(el.tag, 'class') || '').split(/\s+/);
+      for (var c = 0; c < cls.length; c++) if (CLASSES[cls[c]]) return CLASSES[cls[c]];
+      if (/^(h1|h2|h3|h4|button|a|label|option|dt|dd|th|td|title|summary)$/.test(el.name)) return TAGS[el.name];
+    }
+    var p = stack[stack.length - 1];
+    return TAGS[p.name] || 'Text';
+  }
+
+  function scan(src) {
+    var fields = [], stack = [], i = 0, n = src.length, low = src.toLowerCase(), uid = 0;
+
+    function text(a, b) {
+      var raw = src.slice(a, b);
+      var parent = stack[stack.length - 1];
+      if (!parent) return;
+      var inHead = stack.some(function (s) { return s.name === 'head'; });
+      if (inHead && parent.name !== 'title') return;
+      if (attr(parent.tag, 'data-year') != null) return;
+      if (!/[A-Za-z0-9\u00C0-\uFFFF]/.test(decode(raw).replace(/[\u00A0-\u00BF\u2000-\u206F]/g, ''))) return;
+      var lead = raw.length - raw.replace(/^\s+/, '').length;
+      var trail = raw.length - raw.replace(/\s+$/, '').length;
+      var f = { id: 'f' + (uid++), kind: 'text', start: a + lead, end: b - trail, group: inHead ? SEO : groupOf(stack), label: labelOf(stack), parent: parent.name };
+      f.raw = src.slice(f.start, f.end);
+      f.original = f.value = decode(f.raw);
+      var cnt = attr(parent.tag, 'data-count');
+      if (cnt != null) {
+        f.kind = 'count'; f.label = 'Counter number';
+        var m = /\sdata-count\s*=\s*"/.exec(parent.tag);
+        f.attrStart = parent.start + m.index + m[0].length;
+        f.attrEnd = parent.start + parent.tag.indexOf('"', m.index + m[0].length);
+      }
+      f.noWrap = inHead || f.kind === 'count' || parent.name === 'option';
+      fields.push(f);
+    }
+
+    while (i < n) {
+      var lt = src.indexOf('<', i);
+      if (lt < 0) lt = n;
+      if (lt > i) text(i, lt);
+      if (lt >= n) break;
+      if (src.substr(lt, 4) === '<!--') { var e = src.indexOf('-->', lt + 4); i = e < 0 ? n : e + 3; continue; }
+      var c1 = src[lt + 1];
+      if (c1 === '!' || c1 === '?') { var g = src.indexOf('>', lt); i = g < 0 ? n : g + 1; continue; }
+      var m = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(src.slice(lt, lt + 60));
+      if (!m) { i = lt + 1; continue; }
+      var gt = tagEnd(src, lt), tag = src.slice(lt, gt + 1), name = m[2].toLowerCase();
+      if (m[1]) {
+        for (var k = stack.length - 1; k >= 0; k--) if (stack[k].name === name) { stack.length = k; break; }
+        i = gt + 1; continue;
+      }
+      if (SKIP.test(name)) {
+        var cl = low.indexOf('</' + name, gt + 1);
+        i = cl < 0 ? n : src.indexOf('>', cl) + 1;
+        continue;
+      }
+      if (!VOID.test(name) && tag[tag.length - 2] !== '/') stack.push({ name: name, tag: tag, start: lt });
+      i = gt + 1;
+    }
+
+    // SEO meta descriptions (attributes)
+    var re = /<meta\s+(?:name|property)="(description|og:title|og:description)"\s+content="/gi, mm;
+    var metaLabels = { description: 'Google description', 'og:title': 'Social share title', 'og:description': 'Social share description' };
+    while ((mm = re.exec(src))) {
+      var s = mm.index + mm[0].length, en = src.indexOf('"', s);
+      var mf = { id: 'f' + (uid++), kind: 'attr', start: s, end: en, raw: src.slice(s, en), group: SEO, label: metaLabels[mm[1].toLowerCase()], noWrap: true };
+      mf.original = mf.value = decode(mf.raw);
+      fields.push(mf);
+    }
+    fields.sort(function (a, b) { return a.start - b.start; });
+
+    // Friendly names for product groups
+    var names = {};
+    fields.forEach(function (f) { if (f.group.indexOf('product:') === 0 && f.parent === 'h3' && !names[f.group]) names[f.group] = 'Product: ' + f.value; });
+    fields.forEach(function (f) { if (f.group.indexOf('product:') === 0) f.group = names[f.group] || 'Product'; });
+    return fields;
+  }
+
+  /* Apply edits to the source. wrap=true marks each text for the clickable preview. */
+  function build(page, wrap) {
+    var list = [];
+    page.fields.forEach(function (f) {
+      var changed = f.value !== f.original;
+      var rep = changed ? (f.kind === 'attr' ? encAttr(f.value) : encText(f.value)) : f.raw;
+      if (wrap && !f.noWrap) rep = '<cms-t data-cms="' + f.id + '">' + rep + '</cms-t>';
+      if (changed || (wrap && !f.noWrap)) list.push({ s: f.start, e: f.end, r: rep });
+      if (changed && f.kind === 'count') {
+        var num = f.value.replace(/[^0-9.]/g, '');
+        if (num) list.push({ s: f.attrStart, e: f.attrEnd, r: num });
+      }
+    });
+    list.sort(function (a, b) { return a.s - b.s; });
+    var out = [], pos = 0;
+    list.forEach(function (x) { out.push(page.src.slice(pos, x.s), x.r); pos = x.e; });
+    out.push(page.src.slice(pos));
+    return out.join('');
+  }
+
+  function bake(page) { page.src = build(page, false); page.fields = scan(page.src); }
+  function fieldChanges(page) { return page.fields.filter(function (f) { return f.value !== f.original; }).length; }
+  function isDirty(page) { return page.src !== page.base || fieldChanges(page) > 0; }
+
+  /* =========================================================
+     Loading & saving
+     ========================================================= */
+  function repoPath(file) { var d = (S.dir || '').replace(/^\/+|\/+$/g, ''); return (d ? d + '/' : '') + file; }
+  function ghFetch(path, opts) {
+    var url = 'https://api.github.com/repos/' + encodeURIComponent(S.owner) + '/' + encodeURIComponent(S.repo) + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+    if (!opts) url += '?ref=' + encodeURIComponent(S.branch || 'main') + '&t=' + Date.now();
+    return fetch(url, Object.assign({ headers: { Authorization: 'Bearer ' + S.token, Accept: 'application/vnd.github+json' } }, opts || {}))
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(r.status === 401 ? 'The token was rejected. Check that it was copied correctly and hasn\'t expired.' : r.status === 404 ? 'Not found. Check the username, repository, branch and folder.' : (j.message || ('GitHub error ' + r.status)));
+          return j;
+        });
+      });
+  }
+  function b64enc(str) {
+    var bytes = new TextEncoder().encode(str), bin = '';
+    for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  function b64dec(b) {
+    var bin = atob(b.replace(/\s/g, '')), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function addPage(file, name, text, sha) {
+    pages[file] = { file: file, name: name, base: text, src: text, sha: sha || null, fields: scan(text) };
+  }
+
+  function loadAll() {
+    showLoader('Loading your pages…', '', false);
+    var viaGH = hasGH();
+    var jobs = PAGES.map(function (p) {
+      var job = viaGH
+        ? ghFetch(repoPath(p.file)).then(function (j) { return { text: b64dec(j.content), sha: j.sha }; })
+        : fetch(p.file + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text().then(function (t) { return { text: t }; }); });
+      return job.then(function (res) { addPage(p.file, p.name, res.text, res.sha); return null; }, function (err) { return err; });
+    });
+    Promise.all(jobs).then(function (errs) {
+      var loaded = Object.keys(pages).length;
+      if (!loaded) {
+        var e = errs.filter(Boolean)[0];
+        if (viaGH) showLoader('Couldn\'t load from GitHub', (e ? e.message : '') + ' Fix the GitHub settings, or open the files from your computer.', true);
+        else showLoader('Open your website files', 'This page can\'t read the files directly when opened from your computer. Connect GitHub (recommended), or choose index.html and products.html from the gears-website folder.', true);
+        return;
+      }
+      source = viaGH ? 'github' : 'site';
+      hideLoader();
+      switchPage(PAGES.filter(function (p) { return pages[p.file]; })[0].file);
+    });
+  }
+
+  function showLoader(title, text, btns) {
+    $('#loader').classList.remove('hidden');
+    $('#loader-title').textContent = title;
+    $('#loader-text').textContent = text;
+    $('#loader-btns').hidden = !btns;
+  }
+  function hideLoader() { $('#loader').classList.add('hidden'); }
+
+  $('#file-input').addEventListener('change', function (e) {
+    var files = Array.prototype.slice.call(e.target.files);
+    if (!files.length) return;
+    Promise.all(files.map(function (f) { return f.text().then(function (t) { return { f: f, t: t }; }); })).then(function (list) {
+      list.forEach(function (x) {
+        var known = PAGES.filter(function (p) { return p.file === x.f.name; })[0];
+        if (!known) PAGES.push(known = { file: x.f.name, name: x.f.name.replace(/\.html$/, '') });
+        addPage(x.f.name, known.name, x.t, null);
+      });
+      source = 'local';
+      hideLoader();
+      switchPage(list[0].f.name);
+    });
+  });
+
+  /* =========================================================
+     Rendering
+     ========================================================= */
+  function updateStatus() {
+    var dirtyPages = Object.keys(pages).filter(function (k) { return isDirty(pages[k]); });
+    var total = 0;
+    Object.keys(pages).forEach(function (k) { total += fieldChanges(pages[k]) + (pages[k].src !== pages[k].base ? 1 : 0); });
+    $('#change-count').textContent = total;
+    var where = source === 'github' ? 'Connected to GitHub <b>' + esc(S.owner + '/' + S.repo) + '</b>'
+      : source === 'local' ? 'Files opened from your computer: use <b>Download</b> to save'
+      : 'Not connected: <b>connect GitHub</b> to publish directly';
+    $('#status').innerHTML = where + (dirtyPages.length ? ' · <b style="color:#ff6b14">unsaved changes</b>' : '');
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('dirty', !!pages[t.dataset.file] && isDirty(pages[t.dataset.file])); });
+  }
+
+  function renderTabs() {
+    var nav = $('#tabs');
+    nav.innerHTML = '';
+    PAGES.forEach(function (p) {
+      if (!pages[p.file]) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tab' + (p.file === cur ? ' active' : ''); b.dataset.file = p.file;
+      b.innerHTML = '<span class="dot"></span>' + esc(p.name);
+      b.addEventListener('click', function () { switchPage(p.file); });
+      nav.appendChild(b);
+    });
+  }
+
+  function groupsOf(page) {
+    var order = [], map = {};
+    page.fields.forEach(function (f) {
+      if (!map[f.group]) { map[f.group] = []; order.push(f.group); }
+      map[f.group].push(f);
+    });
+    return order.map(function (g) { return { name: g, fields: map[g] }; });
+  }
+
+  function autosize(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; }
+
+  function renderFields() {
+    var page = pages[cur];
+    var q = $('#search').value.trim().toLowerCase();
+    var wrap = $('#fields');
+    var html = '';
+    var helpHidden = false;
+    try { helpHidden = localStorage.getItem('site-editor-help') === 'hide'; } catch (e) {}
+    if (!helpHidden) {
+      html += '<div class="help"><button class="x" type="button" data-hide-help aria-label="Hide help">×</button><h3>How to edit</h3><ol>' +
+        '<li>Click any text in the <b>preview</b> on the right, or find it below.</li>' +
+        '<li>Type the new text. The preview updates as you type.</li>' +
+        '<li>Press <b>Publish</b>. Your live site updates in about a minute.</li></ol></div>';
+    }
+    var groups = groupsOf(page), navHtml = '', gi = 0;
+    groups.forEach(function (g) {
+      var fs = q ? g.fields.filter(function (f) { return f.value.toLowerCase().indexOf(q) >= 0 || f.label.toLowerCase().indexOf(q) >= 0 || g.name.toLowerCase().indexOf(q) >= 0; }) : g.fields;
+      if (!fs.length) return;
+      var gid = 'g' + (gi++);
+      var changed = fs.filter(function (f) { return f.value !== f.original; }).length;
+      navHtml += '<li><button type="button" data-goto="' + gid + '"><span>' + esc(g.name) + '</span><span class="n' + (changed ? ' changed' : '') + '" data-gcount="' + gid + '">' + (changed ? changed + ' edited' : fs.length) + '</span></button></li>';
+      html += '<section class="group" id="' + gid + '"><h2>' + esc(g.name) + '</h2>';
+      fs.forEach(function (f) {
+        var ch = f.value !== f.original;
+        html += '<div class="field' + (ch ? ' changed' : '') + '" data-id="' + f.id + '" data-group="' + gid + '">' +
+          '<div class="f-head"><label for="t-' + f.id + '">' + esc(f.label) + '</label><button type="button" class="revert" data-revert="' + f.id + '">Undo</button></div>' +
+          '<textarea id="t-' + f.id + '" rows="1" spellcheck="true">' + esc(f.value) + '</textarea>' +
+          '<div class="orig">Was: <s>' + esc(f.original) + '</s></div></div>';
+      });
+      html += '</section>';
+    });
+    if (!gi) html += '<p class="empty">No text matches “' + esc(q) + '”.</p>';
+    wrap.innerHTML = html;
+    $('#group-list').innerHTML = navHtml;
+    wrap.querySelectorAll('textarea').forEach(autosize);
+  }
+
+  function fieldById(id) { var p = pages[cur]; for (var i = 0; i < p.fields.length; i++) if (p.fields[i].id === id) return p.fields[i]; return null; }
+
+  function refreshGroupCount(gid) {
+    var el = document.querySelector('[data-gcount="' + gid + '"]');
+    if (!el) return;
+    var all = document.querySelectorAll('.field[data-group="' + gid + '"]');
+    var ch = document.querySelectorAll('.field.changed[data-group="' + gid + '"]').length;
+    el.textContent = ch ? ch + ' edited' : all.length;
+    el.classList.toggle('changed', !!ch);
+  }
+
+  $('#fields').addEventListener('input', function (e) {
+    if (e.target.tagName !== 'TEXTAREA') return;
+    var box = e.target.closest('.field'), f = fieldById(box.dataset.id);
+    f.value = e.target.value;
+    autosize(e.target);
+    var ch = f.value !== f.original;
+    box.classList.toggle('changed', ch);
+    $('.orig s', box).textContent = f.original;
+    refreshGroupCount(box.dataset.group);
+    var el = pvEl(f.id);
+    if (el) el.textContent = f.value;
+    if (f.kind === 'count' || f.noWrap) schedulePreview();
+    updateStatus();
+  });
+  $('#fields').addEventListener('focusin', function (e) {
+    if (e.target.tagName !== 'TEXTAREA') return;
+    var box = e.target.closest('.field');
+    document.querySelectorAll('.field.focus').forEach(function (x) { x.classList.remove('focus'); });
+    box.classList.add('focus');
+    highlight(box.dataset.id, true);
+  });
+  $('#fields').addEventListener('click', function (e) {
+    var r = e.target.closest('[data-revert]');
+    if (r) {
+      var f = fieldById(r.dataset.revert), box = r.closest('.field'), t = $('textarea', box);
+      f.value = f.original; t.value = f.value; autosize(t);
+      box.classList.remove('changed'); refreshGroupCount(box.dataset.group);
+      var el = pvEl(f.id); if (el) el.textContent = f.value;
+      updateStatus();
+    }
+    if (e.target.closest('[data-hide-help]')) {
+      try { localStorage.setItem('site-editor-help', 'hide'); } catch (err) {}
+      e.target.closest('.help').remove();
+    }
+  });
+  $('#group-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-goto]');
+    if (!b) return;
+    document.querySelectorAll('#group-list button').forEach(function (x) { x.classList.remove('active'); });
+    b.classList.add('active');
+    var g = document.getElementById(b.dataset.goto);
+    $('#fields').scrollTo({ top: g.offsetTop - 10 });
+    var first = g.querySelector('.field');
+    if (first) highlight(first.dataset.id, true);
+  });
+  var st;
+  $('#search').addEventListener('input', function () { clearTimeout(st); st = setTimeout(renderFields, 180); });
+
+  function switchPage(file) {
+    cur = file;
+    focusedId = null;
+    renderTabs();
+    renderFields();
+    renderPreview();
+    updateStatus();
+  }
+
+  /* =========================================================
+     Live preview (click text to jump to its field)
+     ========================================================= */
+  var pv = $('#pv'), pvTimer;
+  function pvDoc() { try { return pv.contentDocument; } catch (e) { return null; } }
+  function pvEl(id) { var d = pvDoc(); return d ? d.querySelector('cms-t[data-cms="' + id + '"]') : null; }
+  function schedulePreview() { clearTimeout(pvTimer); pvTimer = setTimeout(renderPreview, 700); }
+
+  function renderPreview() {
+    var page = pages[cur];
+    if (!page) return;
+    var d = pvDoc(), y = d && d.defaultView ? d.defaultView.scrollY : 0;
+    var html = build(page, true);
+    var baseHref = new URL('.', location.href).href;
+    var inject = '<base href="' + baseHref + '"><style>cms-t{cursor:text}cms-t:hover{outline:1px dashed rgba(255,107,20,.9);outline-offset:2px}' +
+      'cms-t.cms-focus{outline:2px solid #ff6b14!important;outline-offset:3px;background:rgba(255,107,20,.22)}</style>';
+    html = html.replace(/<head([^>]*)>/i, function (m) { return m + inject; });
+    pv.onload = function () {
+      var doc = pvDoc();
+      if (!doc) return;
+      if (y) doc.defaultView.scrollTo(0, y);
+      doc.addEventListener('click', function (e) {
+        var t = e.target.closest && e.target.closest('cms-t');
+        if (t) {
+          e.preventDefault(); e.stopPropagation();
+          focusField(t.getAttribute('data-cms'));
+          return;
+        }
+        var a = e.target.closest && e.target.closest('a[href]');
+        if (a && a.getAttribute('href').charAt(0) !== '#') e.preventDefault();
+      }, true);
+      if (focusedId) highlight(focusedId, false);
+    };
+    pv.srcdoc = html;
+  }
+
+  function highlight(id, scroll) {
+    focusedId = id;
+    var d = pvDoc();
+    if (!d) return;
+    d.querySelectorAll('.cms-focus').forEach(function (x) { x.classList.remove('cms-focus'); });
+    var el = pvEl(id);
+    if (el) {
+      el.classList.add('cms-focus');
+      if (scroll) {
+        var r = el.getBoundingClientRect(), vh = d.defaultView.innerHeight;
+        if (r.top < 60 || r.bottom > vh - 20) el.scrollIntoView({ block: 'center' });
+      }
+    }
+  }
+
+  function focusField(id) {
+    if ($('#search').value) { $('#search').value = ''; renderFields(); }
+    var t = document.getElementById('t-' + id);
+    if (!t) return;
+    $('#layout').classList.remove('show-preview');
+    t.closest('.field').scrollIntoView({ block: 'center' });
+    t.focus({ preventScroll: true });
+    t.setSelectionRange(t.value.length, t.value.length);
+  }
+
+  document.querySelectorAll('[data-pv]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-pv]').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('#pv-wrap').classList.toggle('mobile', b.dataset.pv === 'mobile');
+    });
+  });
+  $('#btn-toggle-preview').addEventListener('click', function () { $('#layout').classList.add('show-preview'); });
+  $('#btn-back').addEventListener('click', function () { $('#layout').classList.remove('show-preview'); });
+
+  /* =========================================================
+     Toolbar actions
+     ========================================================= */
+  function toast(msg, err) {
+    var t = $('#toast');
+    t.textContent = msg; t.classList.toggle('err', !!err); t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, err ? 6000 : 3200);
+  }
+
+  // GitHub settings
+  var dlgS = $('#dlg-settings');
+  function openSettings() {
+    $('#s-owner').value = S.owner || ''; $('#s-repo').value = S.repo || ''; $('#s-branch').value = S.branch || 'main';
+    $('#s-dir').value = S.dir || ''; $('#s-token').value = S.token || ''; $('#s-msg').textContent = ''; $('#s-msg').className = 'msg';
+    dlgS.showModal();
+  }
+  $('#btn-settings').addEventListener('click', openSettings);
+  $('#btn-connect').addEventListener('click', openSettings);
+  $('#s-save').addEventListener('click', function () {
+    var prev = Object.assign({}, S);
+    S.owner = $('#s-owner').value.trim(); S.repo = $('#s-repo').value.trim(); S.branch = $('#s-branch').value.trim() || 'main';
+    S.dir = $('#s-dir').value.trim(); S.token = $('#s-token').value.trim();
+    var msg = $('#s-msg');
+    if (!hasGH()) { msg.className = 'msg err'; msg.textContent = 'Please fill in username, repository and token.'; return; }
+    msg.className = 'msg'; msg.textContent = 'Checking…';
+    ghFetch(repoPath(PAGES[0].file)).then(function () {
+      saveSettings();
+      msg.className = 'msg ok'; msg.textContent = 'Connected ✓';
+      var dirty = Object.keys(pages).some(function (k) { return isDirty(pages[k]); });
+      setTimeout(function () {
+        dlgS.close();
+        if (!dirty) { pages = {}; loadAll(); }
+        else { source = 'github'; Object.keys(pages).forEach(function (k) { pages[k].sha = null; }); updateStatus(); toast('Connected. Your current edits are kept.'); }
+      }, 500);
+    }).catch(function (e) { S = prev; msg.className = 'msg err'; msg.textContent = e.message; });
+  });
+  $('#s-forget').addEventListener('click', function () {
+    S.token = ''; saveSettings(); $('#s-token').value = '';
+    if (source === 'github') source = 'site';
+    $('#s-msg').className = 'msg ok'; $('#s-msg').textContent = 'Disconnected. The token was removed from this browser.';
+    updateStatus();
+  });
+
+  // Find & replace
+  var dlgF = $('#dlg-find');
+  function countMatches() {
+    var f = $('#r-find').value, n = 0;
+    if (!f) { $('#r-msg').textContent = ''; return 0; }
+    var re = new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#r-case').checked ? 'g' : 'gi');
+    Object.keys(pages).forEach(function (k) { var m = build(pages[k], false).match(re); n += m ? m.length : 0; });
+    $('#r-msg').className = 'msg'; $('#r-msg').textContent = n ? n + ' match' + (n > 1 ? 'es' : '') + ' found across ' + Object.keys(pages).length + ' page(s).' : 'No matches.';
+    return n;
+  }
+  $('#btn-find').addEventListener('click', function () { if (!cur) return; $('#r-msg').textContent = ''; dlgF.showModal(); $('#r-find').focus(); });
+  $('#r-find').addEventListener('input', countMatches);
+  $('#r-case').addEventListener('change', countMatches);
+  $('#r-go').addEventListener('click', function () {
+    var f = $('#r-find').value, r = $('#r-rep').value;
+    if (!f) return;
+    var n = countMatches();
+    if (!n) return;
+    var re = new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#r-case').checked ? 'g' : 'gi');
+    var encR = encText(r);
+    Object.keys(pages).forEach(function (k) {
+      var p = pages[k];
+      bake(p);
+      // If the text appears encoded in the file (e.g. "&amp;"), match that form too
+      var encF = encText(f);
+      p.src = p.src.replace(re, function () { return encR; });
+      if (encF !== f) p.src = p.src.replace(new RegExp(encF.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $('#r-case').checked ? 'g' : 'gi'), encR);
+      p.fields = scan(p.src);
+    });
+    dlgF.close();
+    switchPage(cur);
+    toast('Replaced ' + n + ' time' + (n > 1 ? 's' : '') + '. Press Publish to save.');
+  });
+
+  // Download
+  function download(name, text) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/html;charset=utf-8' }));
+    a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  $('#btn-download').addEventListener('click', function () {
+    var dirty = Object.keys(pages).filter(function (k) { return isDirty(pages[k]); });
+    var list = dirty.length ? dirty : (cur ? [cur] : []);
+    list.forEach(function (k, i) { setTimeout(function () { download(k, build(pages[k], false)); }, i * 400); });
+    if (list.length) toast(dirty.length ? 'Downloaded ' + list.length + ' changed page(s). Replace the old files with these.' : 'No changes yet. Downloaded the current page.');
+  });
+
+  // Publish
+  var dlgP = $('#dlg-publish');
+  $('#btn-publish').addEventListener('click', function () {
+    var dirty = Object.keys(pages).filter(function (k) { return isDirty(pages[k]); });
+    if (!dirty.length) { toast('Nothing to publish yet. Edit some text first.'); return; }
+    if (!hasGH()) { toast('Connect GitHub first, or use Download.'); openSettings(); return; }
+    $('#p-files').innerHTML = dirty.map(function (k) { return '<li>' + esc(pages[k].name) + ' <span style="color:#8f98a3">(' + esc(k) + ')</span></li>'; }).join('');
+    $('#p-status').textContent = ''; $('#p-status').className = 'msg';
+    $('#p-go').disabled = false;
+    dlgP.showModal();
+  });
+  $('#p-go').addEventListener('click', function () {
+    var btn = this;
+    var dirty = Object.keys(pages).filter(function (k) { return isDirty(pages[k]); });
+    var note = $('#p-msg').value.trim() || 'Update website text';
+    btn.disabled = true;
+    var status = $('#p-status');
+    var chain = Promise.resolve();
+    dirty.forEach(function (k) {
+      chain = chain.then(function () {
+        var p = pages[k];
+        status.textContent = 'Saving ' + p.name + '…';
+        bake(p);
+        var getSha = p.sha ? Promise.resolve(p.sha) : ghFetch(repoPath(k)).then(function (j) { return j.sha; }, function () { return null; });
+        return getSha.then(function (sha) {
+          var body = { message: note + ' (' + k + ')', content: b64enc(p.src), branch: S.branch || 'main' };
+          if (sha) body.sha = sha;
+          return ghFetch(repoPath(k), { method: 'PUT', headers: { Authorization: 'Bearer ' + S.token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }).then(function (res) {
+          p.sha = res.content && res.content.sha;
+          p.base = p.src;
+        });
+      });
+    });
+    chain.then(function () {
+      status.className = 'msg ok';
+      status.textContent = 'Published ✓ Your website will show the changes in about 1–2 minutes.';
+      source = 'github';
+      switchPage(cur);
+      setTimeout(function () { dlgP.close(); toast('Published. Live in about 1–2 minutes.'); }, 1400);
+    }).catch(function (e) {
+      btn.disabled = false;
+      status.className = 'msg err';
+      status.textContent = 'Couldn\'t publish: ' + e.message + (/sha|match/i.test(e.message) ? ' The file was changed on GitHub meanwhile. Download your edits, reload this page and apply them again.' : '');
+    });
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (Object.keys(pages).some(function (k) { return isDirty(pages[k]); })) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* Test hook (used only for automated checks) */
+  window.__siteEditor = { pages: function () { return pages; }, build: build, scan: scan };
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
